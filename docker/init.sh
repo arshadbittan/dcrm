@@ -1,8 +1,11 @@
-#!bin/bash
+#!/bin/bash
 
-if [ -d "/home/frappe/frappe-bench/apps/frappe" ]; then
+set -e
+
+# If a bench already exists under the mounted workspace, start it; otherwise create a new bench
+if [ -d "/workspace/frappe-bench/apps/frappe" ]; then
     echo "Bench already exists, skipping init"
-    cd frappe-bench
+    cd /workspace/frappe-bench
     bench start
 else
     echo "Creating new bench..."
