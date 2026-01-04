@@ -1,43 +1,16 @@
 #!/bin/bash
-
+# Wrapper to ensure /workspace/init.sh exists and delegates to docker/init.sh
 set -e
 
-# If a bench already exists under the mounted workspace, start it; otherwise create a new bench
-if [ -d "/workspace/frappe-bench/apps/frappe" ]; then
-    echo "Bench already exists, skipping init"
-    cd /workspace/frappe-bench
-    bench start
-else
-    echo "Creating new bench..."
+if [ -x "/workspace/docker/init.sh" ]; then
+  exec /workspace/docker/init.sh "$@"
 fi
 
-bench init --skip-redis-config-generation frappe-bench --version version-15
+# If the expected file isn't present, try the repo-root docker/init.sh path
+if [ -x "./docker/init.sh" ]; then
+  exec ./docker/init.sh "$@"
+fi
 
-cd frappe-bench
-
-# Use containers instead of localhost
-bench set-mariadb-host mariadb
-bench set-redis-cache-host redis://redis:6379
-bench set-redis-queue-host redis://redis:6379
-bench set-redis-socketio-host redis://redis:6379
-
-# Remove redis, watch from Procfile
-sed -i '/redis/d' ./Procfile
-sed -i '/watch/d' ./Procfile
-
-bench get-app crm --branch main
-
-bench new-site crm.localhost \
-    --force \
-    --mariadb-root-password 123 \
-    --admin-password admin \
-    --no-mariadb-socket
-
-bench --site crm.localhost install-app crm
-bench --site crm.localhost set-config developer_mode 1
-bench --site crm.localhost set-config mute_emails 1
-bench --site crm.localhost set-config server_script_enabled 1
-bench --site crm.localhost clear-cache
-bench use crm.localhost
-
-bench start
+echo "ERROR: /workspace/docker/init.sh not found or not executable"
+ls -la /workspace || true
+exit 1
